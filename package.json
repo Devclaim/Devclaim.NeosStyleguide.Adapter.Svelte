@@ -1,0 +1,44 @@
+{
+	"name": "@devclaim/neos-styleguide-adapter-svelte",
+	"version": "0.1.0",
+	"description": "SvelteKit adapter of Devclaim.NeosStyleguide: the styleguide protocol, catalogue, previews and design tokens",
+	"license": "GPL-3.0-or-later",
+	"repository": "github:Devclaim/Devclaim.NeosStyleguide.Adapter.Svelte",
+	"type": "module",
+	"files": [
+		"src"
+	],
+	"exports": {
+		".": {
+			"types": "./src/index.ts",
+			"svelte": "./src/index.ts",
+			"default": "./src/index.ts"
+		},
+		"./server": {
+			"types": "./src/server.ts",
+			"default": "./src/server.ts"
+		},
+		"./Previews.svelte": {
+			"types": "./src/Previews.svelte",
+			"svelte": "./src/Previews.svelte",
+			"default": "./src/Previews.svelte"
+		}
+	},
+	"svelte": "./src/index.ts",
+	"scripts": {
+		"check": "svelte-check --tsconfig ./tsconfig.json"
+	},
+	"dependencies": {
+		"yaml": "^2"
+	},
+	"peerDependencies": {
+		"@sveltejs/kit": "^3.0.0",
+		"svelte": "^5.0.0"
+	},
+	"devDependencies": {
+		"@sveltejs/kit": "^3.0.0",
+		"svelte": "^5.57.1",
+		"svelte-check": "^4.7.6",
+		"typescript": "^6.0.0"
+	}
+}
