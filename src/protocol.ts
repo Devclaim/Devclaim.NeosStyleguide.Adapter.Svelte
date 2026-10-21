@@ -50,6 +50,12 @@ export type EntryDetails = Omit<EntrySummary, 'useCases' | 'propSets'> & {
 
 export type TokenType = 'color' | 'font' | 'size' | 'shadow' | 'ratio' | 'breakpoint' | 'other';
 
+/** design: the raw values of the design (palette, scales); semantic: what components use, pointing at design tokens */
+export type TokenLayer = 'design' | 'semantic';
+
+/** a value of a semantic token per variant: "light", "dark" (the color scheme), "base", "md", "lg", "xl" (from a width) */
+export type TokenVariant = { id: string; token: string };
+
 export type Token = {
 	name: string;
 	value: string;
@@ -57,6 +63,15 @@ export type Token = {
 	type: TokenType;
 	description: string;
 	editable: boolean;
+	/** missing: unknown (an adapter without layers) */
+	layer?: TokenLayer;
+	/** a semantic token with a value per variant: change those, not the token itself */
+	variants?: TokenVariant[];
+	/** a variant: the semantic token it is a value of, and which variant */
+	variantOf?: string;
+	variant?: string;
+	/** a semantic token: the groups whose design tokens it may point at (var(--…)) */
+	pointsAt?: string[];
 };
 
 /** kind: the id of a kind (Tokens.kinds), the navigation of the tokens */

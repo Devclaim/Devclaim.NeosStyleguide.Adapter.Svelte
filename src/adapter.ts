@@ -11,6 +11,7 @@ import {
 	type TokenType,
 	type Validation
 } from './protocol.ts';
+import { tokenLayers } from './layers.ts';
 import type { ThemeTokens } from './tokens.ts';
 
 /**
@@ -73,6 +74,7 @@ export function createAdapter(catalogue: Catalogue, config: AdapterConfig) {
 	function tokens(): Tokens {
 		const defaults = config.tokens.defaults;
 		const groups = new Map<string, TokenGroup>();
+		const layers = tokenLayers(defaults, slug);
 		const list = defaults.map((token) => {
 			const group = slug(token.group);
 			const names = defaults.filter((other) => other.group === token.group).map((other) => other.name);
@@ -88,7 +90,8 @@ export function createAdapter(catalogue: Catalogue, config: AdapterConfig) {
 				group,
 				type: tokenType(token.name),
 				description: token.description,
-				editable: config.tokens.editable(token.name)
+				editable: config.tokens.editable(token.name),
+				...layers.get(token.name)
 			};
 		});
 		const used = new Set([...groups.values()].map((group) => group.kind));
@@ -166,6 +169,7 @@ const KINDS: TokenKind[] = [
 	{ id: 'colors', label: 'Farben' },
 	{ id: 'typography', label: 'Schrift' },
 	{ id: 'spacing', label: 'Abstände und Größen' },
+	{ id: 'corners', label: 'Ecken' },
 	{ id: 'shadows', label: 'Schatten' },
 	{ id: 'ratios', label: 'Formate' },
 	{ id: 'grid', label: 'Raster' }
@@ -182,6 +186,9 @@ function kindOf(names: string[]): string {
 	}
 	if (any(/^--shadow-/)) {
 		return 'shadows';
+	}
+	if (any(/^--radius-/)) {
+		return 'corners';
 	}
 	if (any(/^--aspect-/)) {
 		return 'ratios';
