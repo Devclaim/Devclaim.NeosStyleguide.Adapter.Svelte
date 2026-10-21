@@ -41,7 +41,7 @@ export function createAdapter(catalogue: Catalogue, config: AdapterConfig) {
 		viewports: Object.entries(settings.viewportPresets).map(([id, viewport]) => ({ id, ...viewport })),
 		preview: `${config.basePath}/preview?entry={entry}&site={site}`,
 		gallery: `${config.basePath}/preview?entries={entries}&site={site}`,
-		features: { grid: true }
+		features: { grid: true, colorScheme: true }
 	});
 
 	const summary = (entry: Entry): EntrySummary => ({
@@ -91,6 +91,7 @@ export function createAdapter(catalogue: Catalogue, config: AdapterConfig) {
 				type: tokenType(token.name),
 				description: token.description,
 				editable: config.tokens.editable(token.name),
+				...(token.subgroup ? { subgroup: token.subgroup } : {}),
 				...layers.get(token.name)
 			};
 		});

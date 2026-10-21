@@ -8,8 +8,10 @@ import type { DesignToken } from './tokens.ts';
  *   tokens (the raw values of the design)
  * - a semantic token named like another one plus "-light", "-dark" (the color scheme) or "-base", "-md", "-lg", "-xl"
  *   (from that width) is a variant of it
- * - a semantic token points at the design tokens of its namespace ("--color-…" at the color groups, "--spacing-…" at
- *   the spacing groups …)
+ * - a semantic token points at the design groups its family uses: the groups of the design tokens that the tokens of
+ *   its group (with the variant groups: "Semantic colors", "Semantic colors (light)", "… (dark)") refer to, of its
+ *   namespace. So the colors of the site get the palette of the site, the colors of the event types their own; without
+ *   any reference, every design group of its namespace
  */
 
 export type TokenLayers = {
@@ -46,6 +48,9 @@ export const isSemanticGroup = (group: string) => /^semantic\b/i.test(group.trim
 
 export const namespaceOf = (name: string) => NAMESPACES.find((namespace) => name.startsWith(`--${namespace}-`)) ?? null;
 
+/** the family of a group: its label without the variant ("Semantic colors (light)" → "semantic colors") */
+const familyOf = (group: string) => group.replace(/\s*\([^)]*\)\s*$/, '').trim().toLowerCase();
+
 /**
  * The layer, variants and design token groups of every token, by name
  *
@@ -70,14 +75,32 @@ export function tokenLayers(defaults: DesignToken[], groupId: (group: string) =>
 		designGroups.set(namespace, groups);
 	}
 
+	// the design groups each family refers to, per namespace, in the order of the stylesheets
+	const byName = new Map(defaults.map((token) => [token.name, token]));
+	const referred = new Map<string, Set<string>>();
+	for (const token of defaults) {
+		if (!semantic.has(token.name)) {
+			continue;
+		}
+		for (const [, name] of token.value.matchAll(/var\(\s*(--[\w-]+)/g)) {
+			const target = byName.get(name);
+			if (target && !semantic.has(name) && namespaceOf(name) === namespaceOf(token.name)) {
+				const key = `${familyOf(token.group)} ${namespaceOf(name)}`;
+				referred.set(key, (referred.get(key) ?? new Set()).add(groupId(target.group)));
+			}
+		}
+	}
+
 	for (const token of defaults) {
 		if (!semantic.has(token.name)) {
 			layers.set(token.name, { layer: 'design' });
 			continue;
 		}
 		const namespace = namespaceOf(token.name);
-		const pointsAt = namespace ? designGroups.get(namespace) : undefined;
-		layers.set(token.name, { layer: 'semantic', ...(pointsAt?.length ? { pointsAt } : {}) });
+		const all = namespace ? (designGroups.get(namespace) ?? []) : [];
+		const used = referred.get(`${familyOf(token.group)} ${namespace}`);
+		const pointsAt = used ? all.filter((group) => used.has(group)) : all;
+		layers.set(token.name, { layer: 'semantic', ...(pointsAt.length ? { pointsAt } : {}) });
 	}
 
 	for (const token of defaults) {

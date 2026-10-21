@@ -1,8 +1,8 @@
 /**
  * The design tokens: the CSS custom properties of the @theme blocks (Tailwind) of the app's stylesheets. The CSS is the
  * source, this reads it (name, default value, group, description), so there is no second list to keep in sync. A
- * comment "Group: <label> - <description>" starts a group, the comment behind a token describes it, other comments are
- * only comments. A site overrides tokens in Neos (the property "designTokens" of its site node, one "--name: value;"
+ * comment "Group: <label> - <description>" starts a group, "Subgroup: <label>" a part of it, the comment behind a token
+ * describes it, other comments are only comments. A site overrides tokens in Neos (the property "designTokens" of its site node, one "--name: value;"
  * per line): themeTokens() says which overrides are allowed and turns them into CSS.
  */
 
@@ -17,6 +17,8 @@ export type DesignToken = {
 	groupDescription: string;
 	/** the comment behind the token: "primary actions (buttons)" */
 	description: string;
+	/** a part of its group: the last "Subgroup: <label>" comment above it in the group ("Flächen"); empty without */
+	subgroup: string;
 };
 
 /**
@@ -35,27 +37,30 @@ export function parseThemeTokens(css: string): DesignToken[] {
 	for (const [, block] of css.matchAll(THEME_BLOCK)) {
 		let group = '';
 		let groupDescription = '';
+		let subgroup = '';
 		// statements: comments and declarations (a declaration may span lines)
 		const statements = block.match(/\/\*[\s\S]*?\*\/|[^;/]+(?:\/(?!\*)[^;/]*)*;(?:[ \t]*\/\*[\s\S]*?\*\/)?/g) ?? [];
 		for (const statement of statements.map((text) => text.trim())) {
 			const comment = statement.match(COMMENT);
 			if (comment) {
 				// the line "Group: <label> - <description>" of the comment (more lines are only for developers)
-				const line = comment[1]
-					.split('\n')
-					.map((text) => text.replace(/^[ \t]*\*?[ \t]*/, '').trim())
-					.find((text) => text.startsWith('Group:'));
-				const groupComment = line?.match(/^Group:\s*(.+?)(?:\s+-\s+(.*))?$/);
+				const lines = comment[1].split('\n').map((text) => text.replace(/^[ \t]*\*?[ \t]*/, '').trim());
+				const groupComment = lines.find((text) => text.startsWith('Group:'))?.match(/^Group:\s*(.+?)(?:\s+-\s+(.*))?$/);
 				if (groupComment) {
 					group = groupComment[1].trim();
 					groupDescription = groupComment[2]?.trim() ?? '';
+					subgroup = '';
+				}
+				const subgroupComment = lines.find((text) => text.startsWith('Subgroup:'))?.match(/^Subgroup:\s*(.+)$/);
+				if (subgroupComment) {
+					subgroup = subgroupComment[1].trim();
 				}
 				continue;
 			}
 			const declaration = statement.match(DECLARATION);
 			if (declaration) {
 				const [, name, value, description = ''] = declaration;
-				tokens.push({ name, value: value.replace(/\s+/g, ' ').trim(), group, groupDescription, description });
+				tokens.push({ name, value: value.replace(/\s+/g, ' ').trim(), group, groupDescription, description, subgroup });
 			}
 		}
 	}

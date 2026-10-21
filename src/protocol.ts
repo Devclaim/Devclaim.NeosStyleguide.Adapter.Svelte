@@ -18,8 +18,11 @@ export type Manifest = {
 	preview: string;
 	/** URL template with {entries} (ids, separated by commas) and {site}: every entry with its defaults on one page */
 	gallery?: string;
-	/** the preview draws the page grid while <html> has the attribute data-styleguide-grid */
-	features: { grid: boolean };
+	/**
+	 * grid: the preview draws the page grid while <html> has the attribute data-styleguide-grid; colorScheme: it shows
+	 * the color scheme of data-color-scheme ("light" or "dark") on <html>
+	 */
+	features: { grid: boolean; colorScheme?: boolean };
 };
 
 export type Variant = { id: string; title: string };
@@ -72,6 +75,8 @@ export type Token = {
 	variant?: string;
 	/** a semantic token: the groups whose design tokens it may point at (var(--…)) */
 	pointsAt?: string[];
+	/** a part of its group the interface shows as a heading ("Flächen"); missing: none */
+	subgroup?: string;
 };
 
 /** kind: the id of a kind (Tokens.kinds), the navigation of the tokens */
