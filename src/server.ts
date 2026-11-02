@@ -9,7 +9,16 @@ import type { ThemeTokens } from './tokens.ts';
 export type { CatalogueConfig, Entry, ExampleNode, Settings } from './catalogue.ts';
 export { getSites, pickSite, type StyleguideSite } from './sites.ts';
 
-export type StyleguideConfig = CatalogueConfig & {
+/** how the app loads the node of a node reference: in its own format, e.g. from its headless API */
+export type NodePreviewConfig<Node> = {
+	/**
+	 * The node of the reference, or null (unknown, gone, not for this editor). fetch sends the editor's Neos session; Neos
+	 * resolves the reference (Devclaim.NeosStyleguide NodeReferences) and decides who may see it.
+	 */
+	load: (fetch: typeof globalThis.fetch, ref: string) => Promise<{ node: Node; lang?: string } | null>;
+};
+
+export type StyleguideConfig<Node = unknown> = CatalogueConfig & {
 	/** where the Neos API is, for the server (the sites and the login: Devclaim.NeosStyleguide /api/styleguide/v1/sites) */
 	neosApiUrl: string;
 	/** the design tokens of the app (themeTokens) */
@@ -20,11 +29,16 @@ export type StyleguideConfig = CatalogueConfig & {
 	name?: string;
 	/** put before the module path of an entry's YAML file, its source in the interface, e.g. "Frontend" */
 	sourcePrefix?: string;
+	/** node previews (PROTOCOL.md "Node previews"): the page <basePath>/node, named in the manifest */
+	nodePreview?: NodePreviewConfig<Node>;
 };
 
 export type PreviewItem = { entry: string; component: string; frame: Frame; width: number | null; props: Props };
 
 export type PreviewData = { title: string; items: PreviewItem[]; tokenCss: string; lang: string };
+
+/** node: null when there is none to show; the page then shows a note (data-node-preview-unavailable) */
+export type NodePreviewData<Node> = { node: Node | null; tokenCss: string; lang: string };
 
 /** at most this many entries in one gallery */
 const MAX_ENTRIES = 100;
@@ -37,14 +51,15 @@ const noStore = { 'cache-control': 'no-store' };
  * - <basePath>/preview/+page.server.ts: load = preview (+page.ts: withComponents, +page.svelte: Previews.svelte)
  * and its handleFetch passes the editor's cookie on to neosApiUrl for requests below basePath.
  */
-export function createStyleguide(config: StyleguideConfig) {
+export function createStyleguide<Node = unknown>(config: StyleguideConfig<Node>) {
 	const basePath = config.basePath ?? '/neos/styleguide';
 	const catalogue = createCatalogue(config);
 	const adapter = createAdapter(catalogue, {
 		name: config.name ?? 'SvelteKit',
 		basePath,
 		sourcePrefix: config.sourcePrefix ?? '',
-		tokens: config.tokens
+		tokens: config.tokens,
+		nodePreview: config.nodePreview !== undefined
 	});
 
 	/** the sites the logged-in editor may see; throws 401 without a backend session */
@@ -138,5 +153,23 @@ export function createStyleguide(config: StyleguideConfig) {
 		return { title: gallery ? 'Styleguide' : entries[0].title, items, tokenCss: site?.tokenCss ?? '', lang };
 	}
 
-	return { basePath, catalogue, adapter, sites, endpoint, preview };
+	/**
+	 * A node preview (PROTOCOL.md "Node previews"): ?ref=<node reference>&site=…, the node in the app's format with the
+	 * theme of the site; the app's page renders it with its content components inside data-styleguide-root
+	 */
+	async function nodePreview({ fetch, url }: RequestEvent): Promise<NodePreviewData<Node>> {
+		if (!config.nodePreview) {
+			error(404, 'No node previews');
+		}
+		const site = pickSite(await sites(fetch), url.searchParams.get('site'));
+		const ref = url.searchParams.get('ref') ?? '';
+		const found = ref ? await config.nodePreview.load(fetch, ref).catch(() => null) : null;
+		return {
+			node: found?.node ?? null,
+			tokenCss: site?.tokenCss ?? '',
+			lang: found?.lang ?? site?.languages[0]?.code ?? 'en'
+		};
+	}
+
+	return { basePath, catalogue, adapter, sites, endpoint, preview, nodePreview };
 }

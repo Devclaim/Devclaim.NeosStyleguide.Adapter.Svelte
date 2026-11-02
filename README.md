@@ -7,6 +7,8 @@ stylesheets (Tailwind), and a site overrides them in Neos.
 
 - the protocol: manifest, entries, tokens, validation of token overrides
 - the preview page and the gallery, in the theme of the selected site
+- node previews (optional): a Neos node in a certain state, e.g. a change of the activity log before and after, rendered
+    with the app's content components
 - placeholder images for the example data
 - the design tokens: the parser of the `@theme` blocks and the rules for the overrides of a site (also for the pages
     of the site)
@@ -81,7 +83,35 @@ package ships its TypeScript and Svelte sources; Vite compiles them with the app
     <Previews items={data.items} frames={{ padded: 'p-24', 'page-grid': 'my-page-grid py-24' }} />
     ```
 
-4. **The login:** the adapter asks Neos with the editor's session. `handleFetch` passes the `cookie` of the request
+4. **Node previews** (optional): the backend modules that compare changes (Devclaim.NeosActivity) show a node as the
+    website shows it. The app says how it loads the node of a node reference (Neos resolves it, the format is the
+    app's), the adapter names the page in the manifest and handles the login and the theme:
+
+    ```ts
+    // createStyleguide({ …,
+    nodePreview: {
+        load: async (fetch, ref) => {
+            const response = await fetch(`${NEOS_API_URL}/api/my-headless/node-reference?ref=${encodeURIComponent(ref)}`);
+            return response.ok ? await response.json() : null; // { node, lang }
+        }
+    }
+
+    // src/routes/neos/styleguide/node/+page.server.ts
+    export const csr = false; // only the HTML: the backend module marks the changed words in it
+    export const load = (event) => styleguide.nodePreview(event);
+    ```
+
+    ```svelte
+    <!-- src/routes/neos/styleguide/node/+page.svelte: the node inside data-styleguide-root, else a note -->
+    <svelte:head>{@html `<style>:root{${data.tokenCss}}</style>`}</svelte:head>
+    {#if data.node}
+        <div data-styleguide-root class="my-page-grid py-24"><ContentList nodes={[data.node]} /></div>
+    {:else}
+        <p data-styleguide-root data-node-preview-unavailable>Not available</p>
+    {/if}
+    ```
+
+5. **The login:** the adapter asks Neos with the editor's session. `handleFetch` passes the `cookie` of the request
     on to `neosApiUrl` for requests below `basePath`; the answers must not be cached by shared caches.
 
 The app has to be on the host of the Neos backend (the styleguide reads the previews in its iframes).

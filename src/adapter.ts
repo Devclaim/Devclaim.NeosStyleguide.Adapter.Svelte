@@ -27,6 +27,8 @@ export type AdapterConfig = {
 	/** put before the module path of an entry's YAML file, its source in the interface: "Frontend" */
 	sourcePrefix: string;
 	tokens: ThemeTokens;
+	/** the app renders node previews (StyleguideConfig.nodePreview): named in the manifest */
+	nodePreview: boolean;
 };
 
 export function createAdapter(catalogue: Catalogue, config: AdapterConfig) {
@@ -41,6 +43,7 @@ export function createAdapter(catalogue: Catalogue, config: AdapterConfig) {
 		viewports: Object.entries(settings.viewportPresets).map(([id, viewport]) => ({ id, ...viewport })),
 		preview: `${config.basePath}/preview?entry={entry}&site={site}`,
 		gallery: `${config.basePath}/preview?entries={entries}&site={site}`,
+		...(config.nodePreview ? { nodePreview: `${config.basePath}/node?ref={ref}&site={site}` } : {}),
 		features: { grid: true, colorScheme: true }
 	});
 

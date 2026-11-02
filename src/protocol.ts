@@ -19,6 +19,11 @@ export type Manifest = {
 	/** URL template with {entries} (ids, separated by commas) and {site}: every entry with its defaults on one page */
 	gallery?: string;
 	/**
+	 * URL template with {ref} (a node reference, e.g. "activity:123:before") and {site}: a Neos node in a certain state,
+	 * rendered as the website renders it (the backend modules that compare changes)
+	 */
+	nodePreview?: string;
+	/**
 	 * grid: the preview draws the page grid while <html> has the attribute data-styleguide-grid; colorScheme: it shows
 	 * the color scheme of data-color-scheme ("light" or "dark") on <html>
 	 */
